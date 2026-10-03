@@ -45,7 +45,7 @@ export default function AnalyticsDashboard() {
     async function load() {
       try {
         const [ticketsRes, historyRes, staffRes] = await Promise.all([
-          supabase.from('tickets').select('id,category,status,created_at,deadline,assigned_staff_id'),
+          supabase.from('tickets').select('id,category,status,created_at,deadline,assigned_staff_id,ai_suggested_category,ai_category_accepted'),
           // Ascending order matters: firstResolvedAt below keeps the FIRST match per ticket.
           supabase.from('status_history').select('ticket_id,created_at').eq('new_status', 'resolved').order('created_at', { ascending: true }),
           supabase.from('profiles').select('id,full_name').eq('role', 'staff').eq('is_active', true),
@@ -131,6 +131,13 @@ export default function AnalyticsDashboard() {
     }
   }, [filtered])
 
+  // Monitoring signal: of tickets that got an AI suggestion, how often was the category kept?
+  const aiRate = useMemo(() => {
+    const suggested = filtered.filter((t) => t.ai_suggested_category)
+    if (!suggested.length) return null
+    return Math.round((100 * suggested.filter((t) => t.ai_category_accepted === true).length) / suggested.length)
+  }, [filtered])
+
   if (error) return <ErrorBanner message={error} />
   if (!tickets) return <p>Loading analytics...</p>
 
@@ -151,6 +158,7 @@ export default function AnalyticsDashboard() {
         <div className="stat-tile"><div className="stat-value">{summary.inProgress}</div><div className="muted">In progress</div></div>
         <div className="stat-tile"><div className="stat-value">{summary.resolvedClosed}</div><div className="muted">Resolved + closed</div></div>
         <div className="stat-tile"><div className="stat-value">{summary.overdue}</div><div className="muted">Overdue</div></div>
+        <div className="stat-tile"><div className="stat-value">{aiRate === null ? 'Not enough data yet' : `${aiRate}%`}</div><div className="muted">AI suggestion acceptance rate</div></div>
       </div>
 
       <h3>Tickets by category</h3>

@@ -4,11 +4,15 @@ import { useAuth } from '../context/AuthContext'
 import ErrorBanner from './ErrorBanner'
 
 const CATEGORIES = ['hostel', 'lab', 'wifi', 'electrical', 'plumbing', 'other']
+const PRIORITIES = ['low', 'medium', 'high', 'critical']
+const MIN_CONFIDENCE = 0.6 // below this the AI guess is shown but never auto-filled
+const MIN_DESC_FOR_AI = 15
 const MAX_PHOTO_BYTES = 5 * 1024 * 1024 // matches the bucket's 5 MB limit
 
 export default function NewTicketForm({ onCreated }) {
   const { user } = useAuth()
   const [category, setCategory] = useState('')
+  const [priority, setPriority] = useState('medium')
   const [description, setDescription] = useState('')
   const [location, setLocation] = useState('')
   const [photo, setPhoto] = useState(null)
@@ -16,6 +20,30 @@ export default function NewTicketForm({ onCreated }) {
   const [error, setError] = useState('')
   const [success, setSuccess] = useState('')
   const [busy, setBusy] = useState(false)
+  const [suggestion, setSuggestion] = useState(null) // last successful AI response
+  const [aiState, setAiState] = useState('idle') // idle | loading | failed
+
+  async function suggest() {
+    setAiState('loading')
+    try {
+      const { data: { session } } = await supabase.auth.getSession()
+      const res = await fetch('/api/ai/suggest-triage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${session.access_token}` },
+        body: JSON.stringify({ description, location }),
+      })
+      if (!res.ok) throw new Error(String(res.status))
+      const s = await res.json()
+      setSuggestion(s)
+      setAiState('idle')
+      if (s.confidence >= MIN_CONFIDENCE) {
+        setCategory(s.category)
+        setPriority(s.priority)
+      }
+    } catch {
+      setAiState('failed') // never blocks the form
+    }
+  }
 
   function onPhotoChange(e) {
     const file = e.target.files[0] ?? null
@@ -62,6 +90,16 @@ export default function NewTicketForm({ onCreated }) {
           description: description.trim(),
           location: location.trim(),
           photo_url,
+          priority,
+          // ai_* stay null unless a suggestion was fetched. Accepted = final choice equals suggestion.
+          ...(suggestion && {
+            ai_suggested_category: suggestion.category,
+            ai_suggested_priority: suggestion.priority,
+            ai_confidence: suggestion.confidence,
+            ai_suggestion_reasoning: suggestion.reasoning,
+            ai_category_accepted: category === suggestion.category,
+            ai_priority_accepted: priority === suggestion.priority,
+          }),
         })
         .select('id')
         .single()
@@ -78,6 +116,9 @@ export default function NewTicketForm({ onCreated }) {
 
       setSuccess('Complaint submitted.')
       setCategory('')
+      setPriority('medium')
+      setSuggestion(null)
+      setAiState('idle')
       setDescription('')
       setLocation('')
       setPhoto(null)
@@ -102,6 +143,14 @@ export default function NewTicketForm({ onCreated }) {
         </select>
       </label>
       <label>
+        Priority
+        <select value={priority} onChange={(e) => setPriority(e.target.value)}>
+          {PRIORITIES.map((p) => (
+            <option key={p} value={p}>{p}</option>
+          ))}
+        </select>
+      </label>
+      <label>
         Location
         <input
           value={location}
@@ -113,6 +162,24 @@ export default function NewTicketForm({ onCreated }) {
         Description
         <textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} />
       </label>
+      <button
+        type="button"
+        className="secondary"
+        disabled={aiState === 'loading' || description.trim().length < MIN_DESC_FOR_AI}
+        onClick={suggest}
+      >
+        {aiState === 'loading' ? 'Thinking...' : 'Suggest category & priority'}
+      </button>
+      {aiState === 'failed' && (
+        <p className="ai-note">AI suggestion unavailable right now — please select manually</p>
+      )}
+      {aiState !== 'failed' && suggestion && (
+        <p className="ai-note">
+          {suggestion.confidence >= MIN_CONFIDENCE
+            ? `AI suggests: ${suggestion.category}, ${suggestion.priority} priority (${Math.round(suggestion.confidence * 100)}% confident) — ${suggestion.reasoning}`
+            : `AI guessed ${suggestion.category}, ${suggestion.priority} priority but wasn't confident enough (${Math.round(suggestion.confidence * 100)}%) — please choose manually.`}
+        </p>
+      )}
       <label>
         Photo (optional)
         <input key={fileKey} type="file" accept="image/*" onChange={onPhotoChange} />

@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import ErrorBanner from './ErrorBanner'
+import { PriorityBadge, AiSuggestion } from './TicketAi'
 
 const CATEGORIES = ['hostel', 'lab', 'wifi', 'electrical', 'plumbing', 'other']
 const STATUSES = ['open', 'assigned', 'in_progress', 'resolved', 'closed', 'reopened']
@@ -235,11 +236,12 @@ export default function AdminTicketOverview() {
             <li className={`card${flashIds.has(t.id) ? ' docket-flash' : ''}`} key={t.id}>
               <div className="card-head">
                 <span className="docket-code">{ticketCode(t.id)}</span>
-                <span className={`badge badge-${t.status}`}>{t.status.replace('_', ' ')}</span>
+                <span className="head-badges"><PriorityBadge priority={t.priority} /><span className={`badge badge-${t.status}`}>{t.status.replace('_', ' ')}</span></span>
               </div>
               <hr className="docket-rule" />
               <div className="docket-meta">{t.category} · {t.location}</div>
               <p>{t.description}</p>
+              <AiSuggestion ticket={t} />
               <div className="docket-meta-block">
                 <div>Filed by {t.student?.full_name ?? 'unknown'} · {fmt(t.created_at)}</div>
                 {t.deadline && <div>Deadline: {fmt(t.deadline)}</div>}

@@ -4,6 +4,7 @@ const cors = require('cors');
 const healthRoutes = require('./routes/health');
 const adminStaffRoutes = require('./routes/adminStaff');
 const notifyRoutes = require('./routes/notifyAssignment');
+const aiTriageRoutes = require('./routes/aiTriage');
 const { startEscalationCron } = require('./jobs/cron');
 
 const app = express();
@@ -13,6 +14,7 @@ app.use(express.json());
 app.use('/api/health', healthRoutes);
 app.use('/api/admin/staff', adminStaffRoutes);
 app.use('/api/notify', notifyRoutes);
+app.use('/api/ai', aiTriageRoutes);
 
 startEscalationCron();
 

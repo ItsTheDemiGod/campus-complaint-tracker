@@ -5,6 +5,7 @@
   --color-gold: #C49A2E;
   --color-gold-light: #E8D9A8;
   --color-crimson: #9B2335;
+  --color-crimson-light: #C9707C;
   --color-forest: #2E6A4E;
   --color-steel: #3D5A80;
   --color-paper: #F4F5F2;
@@ -156,3 +157,15 @@ section { margin-top: 1.5rem; }
   background: transparent; border: 1px solid var(--color-crimson); color: var(--color-crimson);
 }
 .error-banner button:hover { background: var(--color-crimson); color: #fff; }
+
+/* Priority: small dot + label, secondary to the status stamp */
+.priority { display: inline-flex; align-items: center; gap: .3rem; font-size: .75rem; color: var(--color-ink-soft); text-transform: capitalize; }
+.priority::before { content: ''; width: .55rem; height: .55rem; border-radius: 50%; background: var(--dot); }
+.priority-low { --dot: var(--color-steel); }
+.priority-medium { --dot: var(--color-gold); }
+.priority-high { --dot: var(--color-crimson-light); }
+.priority-critical { --dot: var(--color-crimson); font-weight: 600; color: var(--color-crimson); }
+.head-badges { display: flex; align-items: center; gap: .6rem; }
+.ai-note { font-size: .85rem; color: var(--color-ink-soft); margin: .25rem 0 .75rem; }
+.ai-details { border-left: 3px solid var(--color-gold); padding-left: .75rem; margin: .75rem 0; font-size: .85rem; }
+.ai-details h4 { margin: 0 0 .25rem; }

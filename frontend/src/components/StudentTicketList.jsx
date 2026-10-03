@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '../lib/supabaseClient'
 import { useAuth } from '../context/AuthContext'
 import ErrorBanner from './ErrorBanner'
+import { PriorityBadge, AiSuggestion } from './TicketAi'
 
 const STATUSES = ['open', 'assigned', 'in_progress', 'resolved', 'closed', 'reopened']
 const PAGE_SIZE = 15
@@ -58,7 +59,7 @@ function TicketCard({ ticket, userId, flash }) {
     <li className={`card${flash ? ' docket-flash' : ''}`}>
       <div className="card-head">
         <span className="docket-code">{ticketCode(ticket.id)}</span>
-        <span className={`badge badge-${ticket.status}`}>{label(ticket.status)}</span>
+        <span className="head-badges"><PriorityBadge priority={ticket.priority} /><span className={`badge badge-${ticket.status}`}>{label(ticket.status)}</span></span>
       </div>
       <hr className="docket-rule" />
       <div className="docket-meta">{ticket.category} · {ticket.location}</div>
@@ -73,6 +74,7 @@ function TicketCard({ ticket, userId, flash }) {
       {open && (
         <div>
           {ticket.photo_url && <img className="ticket-photo" src={ticket.photo_url} alt="Attached" />}
+          <AiSuggestion ticket={ticket} />
           <h4>History</h4>
           <ul className="timeline">
             {history.map((h) => (
